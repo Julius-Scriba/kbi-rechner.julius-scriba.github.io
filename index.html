@@ -4,27 +4,43 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KbI-Rechner</title>
-  <link rel="icon" href="image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23d97706'/><text x='50' y='65' font-size='40' text-anchor='middle' fill='white'>€</text></svg>">
-  <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23d97706'/><text x='50' y='65' font-size='40' text-anchor='middle' fill='white' font-weight='bold'>€</text></svg>">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com?v=3"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body, #root {
+      width: 100%;
+      height: 100%;
+    }
+    
     body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
+    
     .trash-icon {
       transition: all 0.2s;
     }
+    
     .trash-icon:hover {
       transform: scale(1.1);
       color: #d97706;
     }
+    
     .tab-container {
       transition: transform 0.3s ease;
     }
+    
     .swipe-hint {
       position: absolute;
       right: 12px;
@@ -33,24 +49,21 @@
       font-size: 12px;
       pointer-events: none;
     }
+    
     .pdf-button {
       background: linear-gradient(to right, #1e40af, #1d4ed8);
       box-shadow: 0 4px 6px -1px rgba(23, 43, 77, 0.1);
+      transition: all 0.2s;
     }
+    
     .pdf-button:hover {
       background: linear-gradient(to right, #1e3a8a, #1d4ed8);
       transform: translateY(-1px);
+      box-shadow: 0 6px 12px -1px rgba(23, 43, 77, 0.2);
     }
-    .pdf-icon {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      background: url("image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23FFFFFF' d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-2 2l4 4h-4V4zm0 16H8v-2h2v-2h2v2h2v2zm0-6H8v-2h8v2z'/%3E%3C/svg%3E") no-repeat center;
-    }
-    .pdf-button span {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+    
+    .pdf-button:active {
+      transform: translateY(0);
     }
   </style>
 </head>
@@ -58,7 +71,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState } = React;
+    const { useState, useCallback } = React;
 
     function App() {
       const coins = [
@@ -85,14 +98,11 @@
       const [activeTab, setActiveTab] = useState('coins');
       const [touchStart, setTouchStart] = useState(null);
       const [touchEnd, setTouchEnd] = useState(null);
-      
-      const [selectedCoinId, setSelectedCoinId] = useState('2e'); // Start mit 2€
+      const [selectedCoinId, setSelectedCoinId] = useState('2e');
       const [totalWeight, setTotalWeight] = useState('');
-      const [tareWeight, setTareWeight] = useState('34'); // Standard-Schalengewicht 34g
-      
-      const [selectedBanknoteId, setSelectedBanknoteId] = useState('50'); // Start mit 50€
+      const [tareWeight, setTareWeight] = useState('34');
+      const [selectedBanknoteId, setSelectedBanknoteId] = useState('50');
       const [numBanknotes, setNumBanknotes] = useState('');
-      
       const [entries, setEntries] = useState([]);
 
       // Coins calculation
@@ -112,7 +122,6 @@
         } else {
           const selectedCoin = coins.find(coin => coin.id === selectedCoinId);
           if (selectedCoin) {
-            // Gerundete Anzahl der Münzen statt abgeschnitten
             numCoins = Math.round(netWeight / selectedCoin.weight);
             totalValue = numCoins * selectedCoin.value;
             resultText = `${numCoins} Münzen = ${totalValue.toFixed(2)} €`;
@@ -145,53 +154,49 @@
         banknoteIsValid = false;
       }
 
-      const handleAddResult = () => {
+      const handleAddResult = useCallback(() => {
         if (!isValid) return;
         
         const selectedCoin = coins.find(coin => coin.id === selectedCoinId);
         if (selectedCoin) {
-          const newEntry = {
+          setEntries(prev => [...prev, {
             id: Date.now(),
             coinLabel: selectedCoin.label,
             numCoins,
             totalValue
-          };
-          setEntries(prev => [...prev, newEntry]);
+          }]);
           
-          // Reset fields and move to next smaller coin
           setTotalWeight('');
           const currentIndex = coins.findIndex(coin => coin.id === selectedCoinId);
           if (currentIndex < coins.length - 1) {
             setSelectedCoinId(coins[currentIndex + 1].id);
           }
         }
-      };
+      }, [isValid, selectedCoinId, numCoins, totalValue, coins]);
 
-      const handleAddBanknote = () => {
+      const handleAddBanknote = useCallback(() => {
         if (!banknoteIsValid) return;
         
         const selectedNote = banknotes.find(note => note.id === selectedBanknoteId);
         if (selectedNote) {
-          const newEntry = {
+          setEntries(prev => [...prev, {
             id: Date.now(),
             coinLabel: selectedNote.label,
             numCoins: banknoteNum,
             totalValue: banknoteTotalValue
-          };
-          setEntries(prev => [...prev, newEntry]);
+          }]);
           
-          // Reset fields and move to next smaller banknote
           setNumBanknotes('');
           const currentIndex = banknotes.findIndex(note => note.id === selectedBanknoteId);
           if (currentIndex < banknotes.length - 1) {
             setSelectedBanknoteId(banknotes[currentIndex + 1].id);
           }
         }
-      };
+      }, [banknoteIsValid, selectedBanknoteId, banknoteNum, banknoteTotalValue, banknotes]);
 
-      const handleDelete = (id) => {
+      const handleDelete = useCallback((id) => {
         setEntries(prev => prev.filter(entry => entry.id !== id));
-      };
+      }, []);
 
       const totalAmount = entries.reduce((sum, entry) => sum + entry.totalValue, 0);
 
@@ -205,7 +210,7 @@
         setTouchEnd(e.touches[0].clientX);
       };
 
-      const handleTouchEnd = () => {
+      const handleTouchEnd = useCallback(() => {
         if (!touchStart || !touchEnd) return;
         
         const distance = touchStart - touchEnd;
@@ -218,280 +223,211 @@
         if (isRightSwipe && activeTab === 'banknotes') {
           setActiveTab('coins');
         }
-      };
+      }, [touchStart, touchEnd, activeTab]);
 
-      const exportToPDF = () => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        // Set up constants
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const margin = 15;
-        const col1 = margin + 5;
-        const col2 = 80;
-        const col3 = 120;
-        const col4 = 160;
-        const lineHeight = 8;
-        
-        // Aggregiere alle Einträge nach Typ
-        const aggregatedCoins = {};
-        const aggregatedBanknotes = {};
-        
-        // Initialisiere alle Münzen mit 0
-        coins.forEach(coin => {
-          aggregatedCoins[coin.id] = {
-            label: coin.label,
-            count: 0,
-            totalValue: 0,
-            weight: coin.weight
-          };
-        });
-        
-        // Initialisiere alle Scheine mit 0
-        banknotes.forEach(note => {
-          aggregatedBanknotes[note.id] = {
-            label: note.label,
-            count: 0,
-            totalValue: 0,
-            value: note.value
-          };
-        });
-        
-        // Summiere die Einträge
-        entries.forEach(entry => {
-          // Prüfe, ob es sich um eine Münze handelt
-          const isCoin = coins.some(coin => coin.label === entry.coinLabel);
+      const exportToPDF = useCallback(() => {
+        try {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF();
           
-          if (isCoin) {
-            const coin = coins.find(coin => coin.label === entry.coinLabel);
-            if (coin) {
-              aggregatedCoins[coin.id].count += entry.numCoins;
-              aggregatedCoins[coin.id].totalValue += entry.totalValue;
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const margin = 15;
+          const col1 = margin + 5;
+          const col2 = 80;
+          const col3 = 120;
+          const col4 = 160;
+          const lineHeight = 8;
+          
+          const aggregatedCoins = {};
+          const aggregatedBanknotes = {};
+          
+          coins.forEach(coin => {
+            aggregatedCoins[coin.id] = {
+              label: coin.label,
+              count: 0,
+              totalValue: 0,
+              weight: coin.weight
+            };
+          });
+          
+          banknotes.forEach(note => {
+            aggregatedBanknotes[note.id] = {
+              label: note.label,
+              count: 0,
+              totalValue: 0,
+              value: note.value
+            };
+          });
+          
+          entries.forEach(entry => {
+            const isCoin = coins.some(coin => coin.label === entry.coinLabel);
+            
+            if (isCoin) {
+              const coin = coins.find(coin => coin.label === entry.coinLabel);
+              if (coin) {
+                aggregatedCoins[coin.id].count += entry.numCoins;
+                aggregatedCoins[coin.id].totalValue += entry.totalValue;
+              }
+            } else {
+              const note = banknotes.find(note => note.label === entry.coinLabel);
+              if (note) {
+                aggregatedBanknotes[note.id].count += entry.numCoins;
+                aggregatedBanknotes[note.id].totalValue += entry.totalValue;
+              }
             }
-          } else {
-            const note = banknotes.find(note => note.label === entry.coinLabel);
-            if (note) {
-              aggregatedBanknotes[note.id].count += entry.numCoins;
-              aggregatedBanknotes[note.id].totalValue += entry.totalValue;
+          });
+          
+          const sortedCoins = coins.map(coin => aggregatedCoins[coin.id]);
+          const sortedBanknotes = banknotes.map(note => aggregatedBanknotes[note.id]);
+          
+          // Header
+          doc.setFillColor(250, 214, 165);
+          doc.rect(0, 0, pageWidth, 40, 'F');
+          
+          doc.setFontSize(24);
+          doc.setTextColor(217, 119, 6);
+          doc.text('€', 20, 25);
+          
+          doc.setFontSize(22);
+          doc.setTextColor(124, 77, 26);
+          doc.setFont('helvetica', 'bold');
+          doc.text('KbI-Rechner', pageWidth / 2, 20, { align: 'center' });
+          
+          doc.setFontSize(16);
+          doc.setTextColor(156, 117, 79);
+          doc.setFont('helvetica', 'normal');
+          doc.text('Zusammenfassung der gesammelten Werte', pageWidth / 2, 32, { align: 'center' });
+          
+          const today = new Date();
+          const dateStr = `${today.getDate().toString().padStart(2, '0')}.${(today.getMonth()+1).toString().padStart(2, '0')}.${today.getFullYear()}`;
+          doc.setFontSize(12);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`Erstellt am: ${dateStr}`, pageWidth - margin, 45, { align: 'right' });
+          
+          let yPosition = 55;
+          
+          // Coins section
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(124, 77, 26);
+          doc.text('MÜNZEN', pageWidth / 2, yPosition, { align: 'center' });
+          
+          yPosition += 8;
+          doc.setDrawColor(230, 210, 180);
+          doc.setLineWidth(0.5);
+          doc.line(margin, yPosition, pageWidth - margin, yPosition);
+          
+          yPosition += 10;
+          doc.setFillColor(255, 240, 220);
+          doc.rect(margin, yPosition - 8, pageWidth - 2 * margin, 10, 'F');
+          
+          doc.setFontSize(12);
+          doc.setTextColor(124, 77, 26);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Position', col1, yPosition);
+          doc.text('Anzahl', col2, yPosition, { align: 'right' });
+          doc.text('Wert pro Stück', col3, yPosition, { align: 'right' });
+          doc.text('Gesamtwert', col4, yPosition, { align: 'right' });
+          
+          yPosition += 5;
+          doc.setDrawColor(230, 210, 180);
+          doc.line(margin, yPosition, pageWidth - margin, yPosition);
+          
+          yPosition += 12;
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(50, 50, 50);
+          
+          sortedCoins.forEach(coin => {
+            if (yPosition > 265) {
+              doc.addPage();
+              yPosition = 30;
             }
-          }
-        });
-        
-        // Sortiere die Münzen und Scheine in der richtigen Reihenfolge
-        const sortedCoins = coins.map(coin => aggregatedCoins[coin.id]);
-        const sortedBanknotes = banknotes.map(note => aggregatedBanknotes[note.id]);
-        
-        // Header with background
-        doc.setFillColor(250, 214, 165); // Light amber background
-        doc.rect(0, 0, pageWidth, 40, 'F');
-        
-        // Logo (simple euro symbol)
-        doc.setFontSize(24);
-        doc.setTextColor(217, 119, 6);
-        doc.text('€', 20, 25);
-        
-        // Title
-        doc.setFontSize(22);
-        doc.setTextColor(124, 77, 26);
-        doc.setFont('helvetica', 'bold');
-        doc.text('KbI-Rechner', pageWidth / 2, 20, { align: 'center' });
-        
-        // Subtitle
-        doc.setFontSize(16);
-        doc.setTextColor(156, 117, 79);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Zusammenfassung der gesammelten Werte', pageWidth / 2, 32, { align: 'center' });
-        
-        // Date line
-        const today = new Date();
-        const dateStr = `${today.getDate().toString().padStart(2, '0')}.${(today.getMonth()+1).toString().padStart(2, '0')}.${today.getFullYear()}`;
-        const timeStr = `${today.getHours().toString().padStart(2,'0')}-${today.getMinutes().toString().padStart(2,'0')}-${today.getSeconds().toString().padStart(2,'0')}`;
-        doc.setFontSize(12);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Erstellt am: ${dateStr}`, pageWidth - margin, 45, { align: 'right' });
-        
-        // Start position for table
-        let yPosition = 55;
-        
-        // Münzen Überschrift
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(124, 77, 26);
-        doc.text('MÜNZEN', pageWidth / 2, yPosition, { align: 'center' });
-        
-        yPosition += 8;
-        doc.setDrawColor(230, 210, 180);
-        doc.setLineWidth(0.5);
-        doc.line(margin, yPosition, pageWidth - margin, yPosition);
-        
-        // Table header for coins
-        yPosition += 10;
-        doc.setFillColor(255, 240, 220);
-        doc.rect(margin, yPosition - 8, pageWidth - 2 * margin, 10, 'F');
-        
-        doc.setFontSize(12);
-        doc.setTextColor(124, 77, 26);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Position', col1, yPosition);
-        doc.text('Anzahl', col2, yPosition, { align: 'right' });
-        doc.text('Wert pro Stück', col3, yPosition, { align: 'right' });
-        doc.text('Gesamtwert', col4, yPosition, { align: 'right' });
-        
-        // Separator line
-        yPosition += 5;
-        doc.setDrawColor(230, 210, 180);
-        doc.setLineWidth(0.5);
-        doc.line(margin, yPosition, pageWidth - margin, yPosition);
-        
-        // Table content for coins
-        yPosition += 12;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(50, 50, 50);
-        
-        sortedCoins.forEach(coin => {
-          // Check if we need a new page
-          if (yPosition > 265) {
-            doc.addPage();
-            yPosition = 30;
             
-            // Repeat header on new page
-            doc.setFontSize(12);
-            doc.setTextColor(124, 77, 26);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Position', col1, yPosition);
-            doc.text('Anzahl', col2, yPosition, { align: 'right' });
-            doc.text('Wert pro Stück', col3, yPosition, { align: 'right' });
-            doc.text('Gesamtwert', col4, yPosition, { align: 'right' });
-            
-            yPosition += 12;
-            doc.setFont('helvetica', 'normal');
-          }
+            doc.setFontSize(11);
+            doc.text(coin.label, col1, yPosition);
+            doc.text(coin.count.toString(), col2, yPosition, { align: 'right' });
+            const valuePerItem = (coin.totalValue / (coin.count > 0 ? coin.count : 1)).toFixed(2);
+            doc.text(`${valuePerItem} €`, col3, yPosition, { align: 'right' });
+            doc.text(`${coin.totalValue.toFixed(2)} €`, col4, yPosition, { align: 'right' });
+            yPosition += lineHeight + 2;
+          });
           
-          // Position name
-          doc.setFontSize(11);
+          yPosition += 10;
+          
+          // Banknotes section
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(124, 77, 26);
+          doc.text('SCHEINE', pageWidth / 2, yPosition, { align: 'center' });
+          
+          yPosition += 8;
+          doc.setDrawColor(230, 210, 180);
+          doc.line(margin, yPosition, pageWidth - margin, yPosition);
+          
+          yPosition += 10;
+          doc.setFillColor(255, 240, 220);
+          doc.rect(margin, yPosition - 8, pageWidth - 2 * margin, 10, 'F');
+          
+          doc.setFontSize(12);
+          doc.setTextColor(124, 77, 26);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Position', col1, yPosition);
+          doc.text('Anzahl', col2, yPosition, { align: 'right' });
+          doc.text('Wert pro Stück', col3, yPosition, { align: 'right' });
+          doc.text('Gesamtwert', col4, yPosition, { align: 'right' });
+          
+          yPosition += 5;
+          doc.setDrawColor(230, 210, 180);
+          doc.line(margin, yPosition, pageWidth - margin, yPosition);
+          
+          yPosition += 12;
+          doc.setFont('helvetica', 'normal');
           doc.setTextColor(50, 50, 50);
-          doc.text(coin.label, col1, yPosition);
           
-          // Quantity (right aligned)
-          doc.text(coin.count.toString(), col2, yPosition, { align: 'right' });
-          
-          // Value per item (right aligned)
-          const valuePerItem = (coin.totalValue / (coin.count > 0 ? coin.count : 1)).toFixed(2);
-          doc.text(`${valuePerItem} €`, col3, yPosition, { align: 'right' });
-          
-          // Total value (right aligned)
-          doc.text(`${coin.totalValue.toFixed(2)} €`, col4, yPosition, { align: 'right' });
-          
-          // Move to next line
-          yPosition += lineHeight + 2;
-        });
-        
-        // Add space before banknotes section
-        yPosition += 10;
-        
-        // Scheine Überschrift
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(124, 77, 26);
-        doc.text('SCHEINE', pageWidth / 2, yPosition, { align: 'center' });
-        
-        yPosition += 8;
-        doc.setDrawColor(230, 210, 180);
-        doc.setLineWidth(0.5);
-        doc.line(margin, yPosition, pageWidth - margin, yPosition);
-        
-        // Table header for banknotes
-        yPosition += 10;
-        doc.setFillColor(255, 240, 220);
-        doc.rect(margin, yPosition - 8, pageWidth - 2 * margin, 10, 'F');
-        
-        doc.setFontSize(12);
-        doc.setTextColor(124, 77, 26);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Position', col1, yPosition);
-        doc.text('Anzahl', col2, yPosition, { align: 'right' });
-        doc.text('Wert pro Stück', col3, yPosition, { align: 'right' });
-        doc.text('Gesamtwert', col4, yPosition, { align: 'right' });
-        
-        // Separator line
-        yPosition += 5;
-        doc.setDrawColor(230, 210, 180);
-        doc.setLineWidth(0.5);
-        doc.line(margin, yPosition, pageWidth - margin, yPosition);
-        
-        // Table content for banknotes
-        yPosition += 12;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(50, 50, 50);
-        
-        sortedBanknotes.forEach(note => {
-          // Check if we need a new page
-          if (yPosition > 265) {
-            doc.addPage();
-            yPosition = 30;
+          sortedBanknotes.forEach(note => {
+            if (yPosition > 265) {
+              doc.addPage();
+              yPosition = 30;
+            }
             
-            // Repeat header on new page
-            doc.setFontSize(12);
-            doc.setTextColor(124, 77, 26);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Position', col1, yPosition);
-            doc.text('Anzahl', col2, yPosition, { align: 'right' });
-            doc.text('Wert pro Stück', col3, yPosition, { align: 'right' });
-            doc.text('Gesamtwert', col4, yPosition, { align: 'right' });
-            
-            yPosition += 12;
-            doc.setFont('helvetica', 'normal');
-          }
+            doc.setFontSize(11);
+            doc.text(note.label, col1, yPosition);
+            doc.text(note.count.toString(), col2, yPosition, { align: 'right' });
+            const valuePerItem = (note.totalValue / (note.count > 0 ? note.count : 1)).toFixed(2);
+            doc.text(`${valuePerItem} €`, col3, yPosition, { align: 'right' });
+            doc.text(`${note.totalValue.toFixed(2)} €`, col4, yPosition, { align: 'right' });
+            yPosition += lineHeight + 2;
+          });
           
-          // Position name
-          doc.setFontSize(11);
-          doc.setTextColor(50, 50, 50);
-          doc.text(note.label, col1, yPosition);
+          yPosition += 10;
+          doc.setDrawColor(230, 210, 180);
+          doc.line(margin, yPosition, pageWidth - margin, yPosition);
           
-          // Quantity (right aligned)
-          doc.text(note.count.toString(), col2, yPosition, { align: 'right' });
+          yPosition += 10;
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(124, 77, 26);
+          doc.text('GESAMTWERT:', col3, yPosition, { align: 'right' });
           
-          // Value per item (right aligned)
-          const valuePerItem = (note.totalValue / (note.count > 0 ? note.count : 1)).toFixed(2);
-          doc.text(`${valuePerItem} €`, col3, yPosition, { align: 'right' });
+          doc.setFontSize(16);
+          doc.setTextColor(217, 119, 6);
+          doc.text(`${totalAmount.toFixed(2)} €`, col4, yPosition, { align: 'right' });
           
-          // Total value (right aligned)
-          doc.text(`${note.totalValue.toFixed(2)} €`, col4, yPosition, { align: 'right' });
+          yPosition = 285;
+          doc.setDrawColor(230, 210, 180);
+          doc.line(margin, yPosition, pageWidth - margin, yPosition);
           
-          // Move to next line
-          yPosition += lineHeight + 2;
-        });
-        
-        // Add some space before total
-        yPosition += 10;
-        
-        // Total section
-        doc.setDrawColor(230, 210, 180);
-        doc.line(margin, yPosition, pageWidth - margin, yPosition);
-        
-        yPosition += 10;
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(124, 77, 26);
-        doc.text('GESAMTWERT:', col3, yPosition, { align: 'right' });
-        
-        doc.setFontSize(16);
-        doc.setTextColor(217, 119, 6);
-        doc.text(`${totalAmount.toFixed(2)} €`, col4, yPosition, { align: 'right' });
-        
-        // Footer
-        yPosition = 285;
-        doc.setDrawColor(230, 210, 180);
-        doc.line(margin, yPosition, pageWidth - margin, yPosition);
-        
-        yPosition += 7;
-        doc.setFontSize(10);
-        doc.setTextColor(150, 150, 150);
-        doc.text('KbI-Rechner • https://julius-scriba.github.io', pageWidth / 2, yPosition, { align: 'center' });
-        
-        // Save the PDF
-        doc.save(`KbI-Rechner_${dateStr}_${timeStr}.pdf`);
-      };
+          yPosition += 7;
+          doc.setFontSize(10);
+          doc.setTextColor(150, 150, 150);
+          doc.text('KbI-Rechner • https://julius-scriba.github.io', pageWidth / 2, yPosition, { align: 'center' });
+          
+          doc.save(`KbI-Rechner_${dateStr}.pdf`);
+        } catch (error) {
+          console.error('PDF Export Error:', error);
+          alert('Fehler beim PDF-Export. Bitte versuchen Sie es später erneut.');
+        }
+      }, [entries, coins, banknotes, totalAmount]);
 
       return (
         <div 
@@ -502,29 +438,27 @@
         >
           <div className="max-w-md mx-auto">
             <header className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-amber-800 mb-2">KbI-Rechner</h1>
-              <p className="text-amber-700">Bestimme den Wert deiner Münzen und Scheine</p>
+              <h1 className="text-4xl font-bold text-amber-800 mb-2">KbI-Rechner</h1>
+              <p className="text-lg text-amber-700">Bestimme den Wert deiner Münzen und Scheine</p>
             </header>
             
-            {/* Swipe hint */}
             <div className="swipe-hint">
               {activeTab === 'coins' ? '→ Swipe für Scheine' : '← Swipe für Münzen'}
             </div>
 
-            {/* Tab Container */}
-            <div className="tab-container overflow-hidden">
+            <div className="tab-container overflow-hidden rounded-2xl">
               <div className={`flex transition-transform duration-300 ${activeTab === 'coins' ? 'translate-x-0' : '-translate-x-full'}`}>
                 {/* Coins Tab */}
                 <div className="w-full min-w-full">
                   <div className="bg-white rounded-2xl shadow-xl p-5 space-y-5 mb-6">
                     <div>
-                      <label className="block text-sm font-medium text-amber-800 mb-1">
+                      <label className="block text-sm font-semibold text-amber-800 mb-2">
                         Münzwert auswählen
                       </label>
                       <select
                         value={selectedCoinId}
                         onChange={(e) => setSelectedCoinId(e.target.value)}
-                        className="w-full px-4 py-3 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-300 appearance-none bg-white"
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-300 appearance-none bg-white cursor-pointer hover:border-amber-300 transition"
                       >
                         {coins.map((coin) => (
                           <option key={coin.id} value={coin.id}>
@@ -536,7 +470,7 @@
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-amber-800 mb-1">
+                        <label className="block text-sm font-semibold text-amber-800 mb-2">
                           Gesamtgewicht (g)
                         </label>
                         <input
@@ -545,11 +479,11 @@
                           value={totalWeight}
                           onChange={(e) => setTotalWeight(e.target.value)}
                           placeholder="z.B. 150"
-                          className="w-full px-4 py-3 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-300"
+                          className="w-full px-4 py-3 border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-300 transition"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-amber-800 mb-1">
+                        <label className="block text-sm font-semibold text-amber-800 mb-2">
                           Schalengewicht (g)
                         </label>
                         <input
@@ -558,29 +492,29 @@
                           value={tareWeight}
                           onChange={(e) => setTareWeight(e.target.value)}
                           placeholder="Standard: 34g"
-                          className="w-full px-4 py-3 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-300"
+                          className="w-full px-4 py-3 border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-300 transition"
                         />
                       </div>
                     </div>
 
                     <div 
-                      className={`p-4 rounded-xl transition-all duration-300 ${
-                        isValid ? 'bg-amber-50 text-amber-800' : 'bg-red-50 text-red-700'
+                      className={`p-4 rounded-xl font-semibold text-center transition-all duration-300 ${
+                        isValid ? 'bg-amber-50 text-amber-800 text-lg' : 'bg-red-50 text-red-700 text-base'
                       }`}
                     >
-                      <p className="text-lg font-semibold text-center">{resultText}</p>
+                      {resultText}
                     </div>
 
                     <button
                       onClick={handleAddResult}
                       disabled={!isValid}
-                      className={`w-full py-3 rounded-lg font-medium transition-all ${
+                      className={`w-full py-3 rounded-lg font-semibold transition-all active:scale-95 ${
                         isValid 
-                          ? 'bg-amber-600 hover:bg-amber-700 text-white' 
+                          ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-md hover:shadow-lg' 
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      Ergebnis hinzufügen
+                      ✓ Ergebnis hinzufügen
                     </button>
                   </div>
                 </div>
@@ -589,13 +523,13 @@
                 <div className="w-full min-w-full">
                   <div className="bg-white rounded-2xl shadow-xl p-5 space-y-5 mb-6">
                     <div>
-                      <label className="block text-sm font-medium text-amber-800 mb-1">
+                      <label className="block text-sm font-semibold text-amber-800 mb-2">
                         Scheinwert auswählen
                       </label>
                       <select
                         value={selectedBanknoteId}
                         onChange={(e) => setSelectedBanknoteId(e.target.value)}
-                        className="w-full px-4 py-3 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-300 appearance-none bg-white"
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-300 appearance-none bg-white cursor-pointer hover:border-amber-300 transition"
                       >
                         {banknotes.map((note) => (
                           <option key={note.id} value={note.id}>
@@ -606,7 +540,7 @@
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-amber-800 mb-1">
+                      <label className="block text-sm font-semibold text-amber-800 mb-2">
                         Anzahl der Scheine
                       </label>
                       <input
@@ -614,28 +548,28 @@
                         value={numBanknotes}
                         onChange={(e) => setNumBanknotes(e.target.value)}
                         placeholder="z.B. 5"
-                        className="w-full px-4 py-3 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-300"
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-300 transition"
                       />
                     </div>
 
                     <div 
-                      className={`p-4 rounded-xl transition-all duration-300 ${
-                        banknoteIsValid ? 'bg-amber-50 text-amber-800' : 'bg-red-50 text-red-700'
+                      className={`p-4 rounded-xl font-semibold text-center transition-all duration-300 ${
+                        banknoteIsValid ? 'bg-amber-50 text-amber-800 text-lg' : 'bg-red-50 text-red-700 text-base'
                       }`}
                     >
-                      <p className="text-lg font-semibold text-center">{banknoteResultText}</p>
+                      {banknoteResultText}
                     </div>
 
                     <button
                       onClick={handleAddBanknote}
                       disabled={!banknoteIsValid}
-                      className={`w-full py-3 rounded-lg font-medium transition-all ${
+                      className={`w-full py-3 rounded-lg font-semibold transition-all active:scale-95 ${
                         banknoteIsValid 
-                          ? 'bg-amber-600 hover:bg-amber-700 text-white' 
+                          ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-md hover:shadow-lg' 
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      Ergebnis hinzufügen
+                      ✓ Ergebnis hinzufügen
                     </button>
                   </div>
                 </div>
@@ -645,33 +579,35 @@
             {entries.length > 0 && (
               <div className="bg-white rounded-2xl shadow-xl p-5 mb-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-amber-800">Gesammelte Werte</h2>
+                  <h2 className="text-2xl font-bold text-amber-800">Gesammelte Werte</h2>
                   <button 
                     onClick={exportToPDF}
-                    className="pdf-button px-4 py-2 rounded-lg text-white flex items-center hover:shadow-md"
+                    className="pdf-button px-4 py-2 rounded-lg text-white font-semibold flex items-center gap-2"
                   >
-                    <span>Als PDF exportieren</span>
+                    <span>📄</span>
+                    <span>PDF</span>
                   </button>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {entries.map(entry => (
                     <div 
                       key={entry.id} 
-                      className="flex justify-between items-center p-3 bg-amber-50 rounded-lg"
+                      className="flex justify-between items-center p-3 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border-l-4 border-amber-400"
                     >
-                      <div>
-                        <div className="font-medium text-amber-800">{entry.coinLabel}</div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-amber-900">{entry.coinLabel}</div>
                         <div className="text-sm text-amber-600">{entry.numCoins} Stück</div>
                       </div>
-                      <div className="flex items-center">
-                        <div className="font-semibold text-lg text-amber-800 mr-2">
+                      <div className="flex items-center gap-3">
+                        <div className="font-bold text-lg text-amber-800 min-w-20 text-right">
                           {entry.totalValue.toFixed(2)} €
                         </div>
                         <button 
                           onClick={() => handleDelete(entry.id)}
-                          className="p-1 rounded-full hover:bg-amber-100 text-amber-600 transition-colors trash-icon"
+                          className="p-2 rounded-full hover:bg-red-100 text-red-500 transition-colors trash-icon"
+                          title="Löschen"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                           </svg>
@@ -680,10 +616,10 @@
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 pt-4 border-t border-amber-200">
+                <div className="mt-5 pt-5 border-t-2 border-amber-200">
                   <div className="flex justify-between items-center font-bold text-xl">
-                    <span>Gesamtwert:</span>
-                    <span className="text-amber-800">
+                    <span className="text-amber-900">Gesamtwert:</span>
+                    <span className="text-amber-800 text-2xl">
                       {totalAmount.toFixed(2)} €
                     </span>
                   </div>
@@ -691,31 +627,35 @@
               </div>
             )}
 
-            <div className="bg-white rounded-2xl shadow-xl p-5">
-              <h2 className="text-xl font-bold text-amber-800 mb-3">So funktioniert's</h2>
+            <div className="bg-white rounded-2xl shadow-xl p-5 mb-4">
+              <h2 className="text-xl font-bold text-amber-800 mb-4">📖 So funktioniert's</h2>
               <ol className="list-decimal list-inside space-y-2 text-amber-700">
-                <li>Wähle zwischen Münzen (Standard) und Scheinen (swipe nach links)</li>
-                <li>Bei Münzen: Gib Gesamtgewicht und Schalengewicht (Standard: 34g) ein</li>
-                <li>Bei Scheinen: Wähle den Scheinwert und gib die Anzahl ein</li>
-                <li>Der Rechner berechnet automatisch den Wert</li>
-                <li>Mit "Ergebnis hinzufügen" kannst du mehrere Berechnungen sammeln</li>
-                <li>Nach dem Hinzufügen wird das Eingabefeld geleert und zur nächst kleineren Einheit gewechselt</li>
-                <li>Lösche Einträge mit dem Papierkorb-Icon</li>
-                <li>Exportiere die Liste als PDF</li>
+                <li className="text-sm">Wähle zwischen <strong>Münzen</strong> (Standard) und <strong>Scheinen</strong> (swipe nach links)</li>
+                <li className="text-sm">Bei Münzen: Gib Gesamtgewicht und Schalengewicht (Standard: 34g) ein</li>
+                <li className="text-sm">Bei Scheinen: Wähle den Scheinwert und gib die Anzahl ein</li>
+                <li className="text-sm">Der Rechner berechnet automatisch den Wert</li>
+                <li className="text-sm">Mit „Ergebnis hinzufügen" sammelst du mehrere Berechnungen</li>
+                <li className="text-sm">Nach dem Hinzufügen wird das Feld geleert und zur nächst kleineren Einheit gewechselt</li>
+                <li className="text-sm">Lösche Einträge mit dem Papierkorb-Icon</li>
+                <li className="text-sm">Exportiere die Liste als PDF 📄</li>
               </ol>
-              <div className="mt-4 p-3 bg-amber-50 rounded-lg">
-                <p className="text-sm text-amber-700">
-                  <span className="font-medium">Hinweis:</span> Bei Münzen wird das Gewicht gerundet berechnet. 
-                  Abweichungen können durch Abnutzung oder Verschmutzung entstehen.
+              <div className="mt-4 p-3 bg-amber-50 rounded-lg border-l-4 border-amber-400">
+                <p className="text-xs text-amber-700">
+                  <strong>💡 Hinweis:</strong> Bei Münzen wird das Gewicht gerundet berechnet. Abweichungen können durch Abnutzung oder Verschmutzung entstehen.
                 </p>
               </div>
             </div>
+
+            <footer className="text-center text-sm text-amber-600 pb-4">
+              <p>KbI-Rechner v2.0 • Modernisiert 2026</p>
+            </footer>
           </div>
         </div>
       );
     }
 
-    ReactDOM.render(<App />, document.getElementById('root'));
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
   </script>
 </body>
 </html>
